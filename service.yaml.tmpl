@@ -1,0 +1,43 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  labels:
+    cloud.googleapis.com/location: $REGION
+  annotations:
+     run.googleapis.com/launch-stage: BETA
+  name: pdf-converter
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/container-dependencies: '{"pdf-converter":["unoserver"]}'
+    spec:
+      containers:
+      - image: gcr.io/$PROJECT_ID/pdf-converter:$PDF_CONVERTER_VER
+        name: pdf-converter
+        ports:
+          - containerPort: 8080
+        env:
+        - name: PDF_BUCKET
+          value: $PDF_BUCKET
+        startupProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 2
+          timeoutSeconds: 10
+          failureThreshold: 3
+          periodSeconds: 10
+      - image: philiplehmann/unoserver:v0.0.1
+        name: unoserver
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 3Gi
+        startupProbe:
+          tcpSocket:
+            port: 5000
+          initialDelaySeconds: 2
+          timeoutSeconds: 10
+          failureThreshold: 3
+          periodSeconds: 10
